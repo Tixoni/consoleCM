@@ -35,7 +35,7 @@ class ShellEmulator:
         # Добавляем начальное приветственное сообщение и первый промпт
         username = os.getlogin()
         hostname = socket.gethostname()
-        self.output_text.insert(tk.END, f"Terminal emulator v1.0\nType 'help' for available commands.\nHOME = USERPROFILE\n\n{username}@{hostname}:~$ ")
+        self.output_text.insert(tk.END, f"Terminal emulator v1.0\nType 'help' for available commands.\n\n{username}@{hostname}:~$ ")
 
         self.output_text.see(tk.END)
         self.input_start = self.output_text.index("end-1c")
@@ -50,7 +50,7 @@ class ShellEmulator:
         self.output_text.mark_set(tk.INSERT, tk.END)
 
     def on_key(self, event):
-        #Обработчик нажатия клавиш с символами
+        """Обработчик нажатия клавиш с символами"""
         current_pos = self.output_text.index(tk.INSERT)
         
         if self.output_text.compare(current_pos, "<", self.input_start):
@@ -63,7 +63,7 @@ class ShellEmulator:
         return "break"
 
     def on_backspace(self, event):
-        #Обработчик клавиши Backspace
+        """Обработчик клавиши Backspace"""
         current_pos = self.output_text.index(tk.INSERT)
         
         if self.output_text.compare(current_pos, "<=", self.input_start):
@@ -75,7 +75,7 @@ class ShellEmulator:
         return "break"
 
     def on_delete(self, event):
-        #Обработчик клавиши Delete
+        """Обработчик клавиши Delete"""
         current_pos = self.output_text.index(tk.INSERT)
         
         if self.output_text.compare(current_pos, "<", self.input_start):
@@ -91,9 +91,9 @@ class ShellEmulator:
 
 
 
-    #Обработчик клавиши Enter
+
     def on_enter(self, event):
-        
+        """Обработчик клавиши Enter"""
 
         #берет команду и убирает лишние пробелы по краям
         command_line = self.output_text.get(self.input_start, tk.END).strip()
@@ -109,7 +109,7 @@ class ShellEmulator:
         else:
             command = command_line
         
-        # ---------------------------------------------Передаем ВСЮ обработку в command_handler
+        # Передаем ВСЮ обработку в command_handler
         result = self.command_handler.execute(command)
         
         # Обрабатываем специальные сигналы

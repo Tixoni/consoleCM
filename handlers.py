@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List
+from typing import List, Tuple
 
 class CommandHandler:
     def __init__(self):
@@ -12,35 +12,71 @@ class CommandHandler:
             'help': self._help,
         }
 
+    
+    def execute_script(self, script_path: str) -> Tuple[List[str], List[str]]:
+        executed_commands = []
+        errors = []
+        
+        if not script_path:
+            errors.append("Путь к скрипту не указан")
+            return executed_commands, errors
+            
+        if not os.path.exists(script_path):
+            errors.append(f"Скрипт '{script_path}' не найден")
+            return executed_commands, errors
+        
+        if not os.path.isfile(script_path):
+            errors.append(f"'{script_path}' не является файлом")
+            return executed_commands, errors
+            
+        try:
+            with open(script_path, 'r', encoding='utf-8') as f:
+                commands = f.readlines()
+            
+            for line_num, command in enumerate(commands, 1):
+                command = command.strip()
+                
+                if not command or command.startswith('#'):
+                    continue
+                    
+                print(f"DEBUG: Выполнение строки {line_num}: {command}")
+                
+                try:
+                    result = self.execute(command)
+                    executed_commands.append(command)
+                    
+                    if result == "EXIT_TERMINAL":
+                        errors.append(f"Строка {line_num}: команда exit прервала выполнение скрипта")
+                        break
+                        
+                except Exception as e:
+                    error_msg = f"Строка {line_num}: {str(e)}"
+                    errors.append(error_msg)
+                    print(f"ERROR: {error_msg}")
+                    
+        except UnicodeDecodeError:
+            errors.append(f"Ошибка кодировки файла '{script_path}'. Используйте UTF-8")
+        except Exception as e:
+            errors.append(f"Ошибка чтения скрипта: {str(e)}")
+            
+        return executed_commands, errors
+
 
 
     def expand_environment_variables(self, text: str) -> str:
-   
         if not text:
             return text
 
-        # Внутренняя функция для замены найденных переменных
         def replace_var(match: re.Match) -> str:
-            # Извлекаем имя переменной (из $VAR или ${VAR})
             var_name = match.group(1) or match.group(2)
-        
-            # получаем через os.environ названия переменных окруждения, если оно сущесвует
             if value := os.environ.get(var_name):
-                return value  # Возвращаем значение если найдено
-        
-            # Если переменная не найдена - бросаем исключение
+                return value
             raise ValueError(f"Переменная окружения ${var_name} не найдена")
 
-        # Паттерн для поиска: $VAR или ${VAR}
         pattern = r'\$([A-Za-z_]\w*)|\$\{([A-Za-z_]\w*)\}'
-    
-        # Заменяем все найденные переменные их значениями
         return re.sub(pattern, replace_var, text)
-    
-
 
     def execute(self, command: str) -> str:
-        #Выполняет команду с обработкой переменных окружения
         if not (clean_cmd := command.strip()):
             return ""
 
@@ -59,7 +95,6 @@ class CommandHandler:
         args = parts[1:]
 
         if handler := self.command_handlers.get(cmd):
-            # Для всех команд, кроме exit, передаём аргументы
             if cmd == 'exit':
                 if args:
                     return "Ошибка: команда exit не принимает аргументов\n"
@@ -69,28 +104,20 @@ class CommandHandler:
         else:
             return f"Ошибка: неизвестная команда '{cmd}'\n"
 
-
-
-
     def _handle_exit(self) -> str:
         return "EXIT_TERMINAL"
     
-    #Заглушка для ls — выводит имя команды и аргументы
     def _ls_stub(self, args: List[str]) -> str:
-        
         if len(args) > 1:
             return "Ошибка: команда ls принимает не более одного аргумента\n"
         return f"Вызвана команда: ls с аргументами: {args}\n"
     
-    #Заглушка для cd — выводит имя команды и аргументы
     def _cd_stub(self, args: List[str]) -> str:
-        
         if len(args) > 1:
             return "Ошибка: команда cd принимает не более одного аргумента\n"
         return f"Вызвана команда: cd с аргументами: {args}\n"
 
     def _help(self, args: List[str] = None) -> str:
-        
         return """Доступные команды:
 ls [директория] - список файлов (заглушка)
 cd [директория] - сменить директорию (заглушка)

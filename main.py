@@ -3,23 +3,73 @@ from tkinter import scrolledtext
 from handlers import CommandHandler
 import os
 import socket
+import argparse
+import sys
+
+def parse_arguments():
+    """Парсинг аргументов командной строки с проверкой ошибок"""
+    parser = argparse.ArgumentParser(description='Эмулятор терминала')
+    parser.add_argument('--vfs-path', type=str, default='./vfs',
+                      help='Путь к физическому расположению VFS')
+    parser.add_argument('--startup-script', type=str, default=None,
+                      help='Путь к стартовому скрипту')
+    
+    args = parser.parse_args()
+    
+    # Проверка существования VFS пути
+    if not os.path.exists(args.vfs_path):
+        raise FileNotFoundError(f"VFS путь не существует: {args.vfs_path}")
+    
+    # Проверка существования скрипта, если указан
+    if args.startup_script and not os.path.exists(args.startup_script):
+        raise FileNotFoundError(f"Стартовый скрипт не найден: {args.startup_script}")
+    
+    return args
 
 class ShellEmulator:
     def __init__(self):
-        # Создаем главное окно приложения
-        self.root = tk.Tk()
-        
-        # Заголовок окна на основе реальных данных ОС
-        username = os.getlogin()
-        hostname = socket.gethostname()
-        self.root.title(f"Эмулятор - [{username}@{hostname}]")
-        
-        self.root.geometry("800x600")      
-        
-        # Инициализируем обработчик команд
-        self.command_handler = CommandHandler()
-        
-        # Создаем текстовое поле с прокруткой 
+        try:
+            args = parse_arguments()
+            
+            # Подробный отладочный вывод
+            self._debug_output(args)
+            
+            self.vfs_path = args.vfs_path
+            self.startup_script = args.startup_script
+            
+            # Инициализация GUI
+            self.root = tk.Tk()
+            username = os.getlogin()
+            hostname = socket.gethostname()
+            self.root.title(f"Эмулятор - [{username}@{hostname}] - VFS: {self.vfs_path}")
+            self.root.geometry("800x600")
+            
+            self.command_handler = CommandHandler()
+            self.setup_gui()
+            
+            # Выполнение стартового скрипта
+            if self.startup_script:
+                self.execute_startup_script()
+                
+        except Exception as e:
+            print(f"Критическая ошибка инициализации: {e}")
+            sys.exit(1)
+
+    def _debug_output(self, args):
+        """Детальный отладочный вывод"""
+        print("=" * 60)
+        print("DEBUG: Параметры эмулятора терминала")
+        print("=" * 60)
+        print(f"VFS Path: {os.path.abspath(args.vfs_path)}")
+        print(f"VFS Exists: {os.path.exists(args.vfs_path)}")
+        print(f"Startup Script: {args.startup_script}")
+        if args.startup_script:
+            print(f"Script Exists: {os.path.exists(args.startup_script)}")
+            print(f"Script is file: {os.path.isfile(args.startup_script)}")
+        print("=" * 60)
+
+    def setup_gui(self):
+        """Настройка графического интерфейса"""
         self.output_text = scrolledtext.ScrolledText(
             self.root,
             wrap=tk.WORD,
@@ -35,7 +85,7 @@ class ShellEmulator:
         # Добавляем начальное приветственное сообщение и первый промпт
         username = os.getlogin()
         hostname = socket.gethostname()
-        self.output_text.insert(tk.END, f"Terminal emulator v1.0\nType 'help' for available commands.\n\n{username}@{hostname}:~$ ")
+        self.display_output(f"Terminal emulator v1.0\nType 'help' for available commands.\n\n{username}@{hostname}:~$ ")
 
         self.output_text.see(tk.END)
         self.input_start = self.output_text.index("end-1c")
@@ -48,6 +98,33 @@ class ShellEmulator:
         
         self.output_text.focus_set()
         self.output_text.mark_set(tk.INSERT, tk.END)
+
+    def display_output(self, text):
+        """Универсальный метод для вывода текста"""
+        self.output_text.insert(tk.END, text)
+        self.output_text.see(tk.END)
+
+    def execute_startup_script(self):
+        """Выполнение стартового скрипта"""
+        executed_commands, errors = self.command_handler.execute_script(self.startup_script)
+        
+        # Обрабатываем ошибки выполнения скрипта
+        if errors:
+            for error in errors:
+                self.display_output(f"\nОшибка скрипта: {error}")
+        
+        # Имитируем выполнение команд для отображения в интерфейсе
+        for command in executed_commands:
+            username = os.getlogin()
+            hostname = socket.gethostname()
+            prompt = f"{username}@{hostname}:~$"
+            self.display_output(f"\n{prompt} {command}")
+            
+            result = self.command_handler.execute(command)
+            if result and result != "EXIT_TERMINAL":
+                self.display_output(f"\n{result}")
+            
+            self.output_text.update()
 
     def on_key(self, event):
         """Обработчик нажатия клавиш с символами"""
@@ -86,44 +163,29 @@ class ShellEmulator:
         
         return "break"
 
-
-
-
-
-
-
     def on_enter(self, event):
         """Обработчик клавиши Enter"""
-
-        #берет команду и убирает лишние пробелы по краям
         command_line = self.output_text.get(self.input_start, tk.END).strip()
         
-        #для промпта
         username = os.getlogin()
         hostname = socket.gethostname()
         prompt = f"{username}@{hostname}:~$"
         
-        #на всякий 
         if command_line.startswith(prompt):
             command = command_line[len(prompt):].strip()
         else:
             command = command_line
         
-        # Передаем ВСЮ обработку в command_handler
         result = self.command_handler.execute(command)
         
-        # Обрабатываем специальные сигналы
         if result == "EXIT_TERMINAL":
             self.root.quit()
             return "break"
         
-        
-        # Добавляем вывод результата
         if result:
             self.output_text.insert(tk.END, f"\n{result}")
         
-        # Добавляем новый промпт
-        self.output_text.insert(tk.END, f"{prompt} ")
+        self.output_text.insert(tk.END, f"\n{prompt} ")
         self.input_start = self.output_text.index("end-1c")
         self.output_text.mark_set(tk.INSERT, tk.END)
         self.output_text.see(tk.END)

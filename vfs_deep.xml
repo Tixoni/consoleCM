@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="deep_vfs">
+  <dir name="home">
+    <dir name="user">
+      <dir name="projects">
+        <dir name="python">
+          <file name="main.py">cHJpbnQoIkhlbGxvIik=</file>
+        </dir>
+        <file name="notes.txt">VGVzdA==</file>
+      </dir>
+    </dir>
+  </dir>
+  <dir name="etc">
+    <file name="hosts"></file>
+  </dir>
+</vfs>

@@ -1,0 +1,10 @@
+<vfs name="my_vfs">
+  <dir name="home">
+    <dir name="user">
+      <file name="readme.txt">SGVsbG8sIFZGUyE=</file>
+    </dir>
+  </dir>
+  <dir name="etc">
+    <file name="config.ini"></file>
+  </dir>
+</vfs>

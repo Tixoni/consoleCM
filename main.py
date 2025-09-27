@@ -1,26 +1,25 @@
 import tkinter as tk
 from tkinter import scrolledtext
 from handlers import CommandHandler
+from vfs import VFSManager
 import os
 import socket
 import argparse
 import sys
 
 def parse_arguments():
-    """Парсинг аргументов командной строки с проверкой ошибок"""
     parser = argparse.ArgumentParser(description='Эмулятор терминала')
-    parser.add_argument('--vfs-path', type=str, default='./vfs',
-                      help='Путь к физическому расположению VFS')
+    parser.add_argument('--vfs-path', type=str, required=True,  # <-- теперь required
+                      help='Путь к XML-файлу с виртуальной файловой системой')
     parser.add_argument('--startup-script', type=str, default=None,
                       help='Путь к стартовому скрипту')
     
     args = parser.parse_args()
     
-    # Проверка существования VFS пути
-    if not os.path.exists(args.vfs_path):
-        raise FileNotFoundError(f"VFS путь не существует: {args.vfs_path}")
+    # Проверка существования XML-файла
+    if not os.path.isfile(args.vfs_path):
+        raise FileNotFoundError(f"VFS XML-файл не найден: {args.vfs_path}")
     
-    # Проверка существования скрипта, если указан
     if args.startup_script and not os.path.exists(args.startup_script):
         raise FileNotFoundError(f"Стартовый скрипт не найден: {args.startup_script}")
     
@@ -44,7 +43,7 @@ class ShellEmulator:
             self.root.title(f"Эмулятор - [{username}@{hostname}] - VFS: {self.vfs_path}")
             self.root.geometry("800x600")
             
-            self.command_handler = CommandHandler()
+            self.command_handler = CommandHandler(self.vfs_path)
             self.setup_gui()
             
             # Выполнение стартового скрипта

@@ -21,15 +21,17 @@ class VFSManager:
 
         self._load_vfs()
 
+
+    #Загружает и парсит XML-файл VFS.
     def _load_vfs(self):
-        """Загружает и парсит XML-файл VFS."""
+        
         try:
             with open(self._vfs_xml_path, 'rb') as f:
                 xml_data = f.read()
         except FileNotFoundError:
             raise FileNotFoundError(f"VFS XML файл не найден: {self._vfs_xml_path}")
 
-        # Вычисляем SHA-256 хеш содержимого файла
+        #SHA-256 хеш содержимого файла
         self._xml_sha256 = hashlib.sha256(xml_data).hexdigest()
 
         try:
@@ -68,16 +70,18 @@ class VFSManager:
                     # Не критично на данном этапе — можно оставить как есть
                     pass
                 node['children'][name] = {'type': 'file', 'content': content}
-            # Игнорируем неизвестные теги
+            
 
         return node
-
+    
+    #Возвращает информацию о VFS для команды vfs-info.
     def get_vfs_info(self) -> str:
-        """Возвращает информацию о VFS для команды vfs-info."""
+        
         return f"VFS Name: {self._root_name}\nSHA-256: {self._xml_sha256}\n"
-
+    
+    #Возвращает узел по пути (список имён).
     def _get_node_at_path(self, path_parts: List[str]) -> Optional[Dict[str, Any]]:
-        """Возвращает узел по пути (список имён)."""
+        
         node = self._vfs_tree
         
         # Пустой путь = корень VFS
@@ -92,8 +96,9 @@ class VFSManager:
             node = node['children'][part]
         return node
 
+    #Смена текущей директории. Поддерживает '.', '..', и абсолютные пути.
     def cd(self, path: str) -> str:
-        """Смена текущей директории. Поддерживает '.', '..', и абсолютные пути."""
+        
         
         if path.startswith('/'):
             # Абсолютный путь - начинаем с корня
@@ -130,8 +135,10 @@ class VFSManager:
         self._current_path = resolved
         return ""
 
+
+    #Возвращает список файлов и директорий в текущей директории.
     def ls(self) -> str:
-        """Возвращает список файлов и директорий в текущей директории."""
+        
         node = self._get_node_at_path(self._current_path)
         if not node or node['type'] != 'dir':
             return "Ошибка: текущая директория недоступна\n"
@@ -140,3 +147,54 @@ class VFSManager:
         if not names:
             return ""
         return "\n".join(names) + "\n"
+    
+
+    #Возвращает текущий путь в виде абсолютного пути (например: /home/user или /).
+    def get_current_path_str(self) -> str:
+        
+        if not self._current_path:
+            return "/"
+        return "/" + "/".join(self._current_path)
+    
+
+    def read_file(self, path: str) -> str:
+        """
+        читает содержимое файла по относительному или абсолютному пути.
+        Возвращает содержимое (декодированное из base64, если возможно), либо вызывает исключение.
+        """
+        if path.startswith('/'):
+            if path == '/':
+                raise ValueError("Невозможно прочитать корень как файл")
+            target_parts = [p for p in path[1:].split('/') if p and p != '.']
+        else:
+            target_parts = self._current_path + [p for p in path.split('/') if p and p != '.']
+
+        # Обработка '..'
+        resolved = []
+        for part in target_parts:
+            if part == '..':
+                if resolved:
+                    resolved.pop()
+            else:
+                resolved.append(part)
+
+        node = self._vfs_tree
+        for part in resolved:
+            if node['type'] != 'dir' or part not in node['children']:
+                raise FileNotFoundError(f"Файл не найден: /{'/'.join(resolved)}")
+            node = node['children'][part]
+
+        if node['type'] != 'file':
+            raise ValueError(f"Путь не является файлом: /{'/'.join(resolved)}")
+
+        content = node['content']
+        if content:
+            try:
+                # Попытка декодировать base64
+                decoded = base64.b64decode(content, validate=True)
+                return decoded.decode('utf-8')
+            except Exception:
+                # Если не base64 — возвращаем как есть (предполагаем текст)
+                return content
+        return ""
+

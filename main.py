@@ -1,3 +1,4 @@
+# main.py
 import tkinter as tk
 from tkinter import scrolledtext
 from handlers import CommandHandler
@@ -7,9 +8,10 @@ import socket
 import argparse
 import sys
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Эмулятор терминала')
-    parser.add_argument('--vfs-path', type=str, required=True,  # <-- теперь required
+    parser.add_argument('--vfs-path', type=str, required=True,
                       help='Путь к XML-файлу с виртуальной файловой системой')
     parser.add_argument('--startup-script', type=str, default=None,
                       help='Путь к стартовому скрипту')
@@ -25,12 +27,11 @@ def parse_arguments():
     
     return args
 
+
 class ShellEmulator:
     def __init__(self):
         try:
             args = parse_arguments()
-            
-            # Подробный отладочный вывод
             self._debug_output(args)
             
             self.vfs_path = args.vfs_path
@@ -81,10 +82,11 @@ class ShellEmulator:
         )
         self.output_text.pack(fill=tk.BOTH, expand=True)
         
-        # Добавляем начальное приветственное сообщение и первый промпт
+        # Получаем текущий путь из VFS для промпта
         username = os.getlogin()
         hostname = socket.gethostname()
-        self.display_output(f"Terminal emulator v1.0\nType 'help' for available commands.\n\n{username}@{hostname}:~$ ")
+        current_dir = self.command_handler.vfs.get_current_path_str()
+        self.display_output(f"Terminal emulator v1.0\nType 'help' for available commands.\n\n{username}@{hostname}:{current_dir}$ ")
 
         self.output_text.see(tk.END)
         self.input_start = self.output_text.index("end-1c")
@@ -116,7 +118,8 @@ class ShellEmulator:
         for command in executed_commands:
             username = os.getlogin()
             hostname = socket.gethostname()
-            prompt = f"{username}@{hostname}:~$"
+            current_dir = self.command_handler.vfs.get_current_path_str()
+            prompt = f"{username}@{hostname}:{current_dir}$"
             self.display_output(f"\n{prompt} {command}")
             
             result = self.command_handler.execute(command)
@@ -168,7 +171,8 @@ class ShellEmulator:
         
         username = os.getlogin()
         hostname = socket.gethostname()
-        prompt = f"{username}@{hostname}:~$"
+        current_dir = self.command_handler.vfs.get_current_path_str()
+        prompt = f"{username}@{hostname}:{current_dir}$"
         
         if command_line.startswith(prompt):
             command = command_line[len(prompt):].strip()
@@ -184,7 +188,10 @@ class ShellEmulator:
         if result:
             self.output_text.insert(tk.END, f"\n{result}")
         
-        self.output_text.insert(tk.END, f"\n{prompt} ")
+        # Обновляем промпт с учётом возможного изменения директории (например, после cd)
+        new_current_dir = self.command_handler.vfs.get_current_path_str()
+        new_prompt = f"{username}@{hostname}:{new_current_dir}$"
+        self.output_text.insert(tk.END, f"\n{new_prompt} ")
         self.input_start = self.output_text.index("end-1c")
         self.output_text.mark_set(tk.INSERT, tk.END)
         self.output_text.see(tk.END)
@@ -193,6 +200,7 @@ class ShellEmulator:
     def run(self):
         """Запуск главного цикла обработки событий"""
         self.root.mainloop()
+
 
 if __name__ == "__main__":
     app = ShellEmulator()

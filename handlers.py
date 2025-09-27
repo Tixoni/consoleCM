@@ -22,6 +22,8 @@ class CommandHandler:
             'cd': self._handle_cd,
             'help': self._handle_help,
             'vfs-info': self._handle_vfs_info,
+            'pwd': self._handle_pwd,
+            'cat': self._handle_cat,
         }
 
     def execute_script(self, script_path: str) -> Tuple[List[str], List[str]]:
@@ -165,3 +167,18 @@ exit              - выйти из терминала
             return self.vfs.get_vfs_info()
         except Exception as e:
             return f"Ошибка получения информации о VFS: {e}\n"
+        
+    def _handle_pwd(self, args: List[str] = None) -> str:
+        if args:
+            return "Ошибка: команда pwd не принимает аргументов\n"
+        return self.vfs.get_current_path_str() + "\n"
+
+    def _handle_cat(self, args: List[str]) -> str:
+        if len(args) != 1:
+            return "Ошибка: команда cat требует ровно один аргумент (имя файла)\n"
+        
+        try:
+            content = self.vfs.read_file(args[0])
+            return content + ("\n" if not content.endswith('\n') else "")
+        except Exception as e:
+            return f"Ошибка: {e}\n"

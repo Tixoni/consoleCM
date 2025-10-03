@@ -1,0 +1,22 @@
+<vfs name="test_vfs">
+    <dir name="home">
+        <dir name="user">
+            <dir name="documents">
+                <file name="readme.txt">VGhpcyBpcyBhIHRlc3QgZmlsZQ==</file>
+            </dir>
+            <file name="example.txt">TGluZSAxOiBIZWxsbw0KTGluZSAyOiBXb3JsZA0KTGluZSAzOiBUZXN0DQpMaW5lIDQ6IEZpbGUNCkxpbmUgNTogRW5k</file>
+            <file name="config.txt">U2V0dGluZzE9dmFsdWUxClNldHRpbmcyPXZhbHVlMg==</file>
+        </dir>
+        <dir name="admin">
+            <file name="system.log">TG9nIGVudHJ5IDEK TG9nIGVudHJ5IDIK</file>
+        </dir>
+    </dir>
+    <dir name="var">
+        <dir name="log">
+            <file name="app.log"> QXBwbGljYXRpb24gc3RhcnRlZA==</file>
+        </dir>
+    </dir>
+    <dir name="tmp">
+        <file name="temp.txt"> VGVtcG9yYXJ5IGRhdGE=</file>
+    </dir>
+</vfs>

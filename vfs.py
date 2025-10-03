@@ -1,4 +1,3 @@
-# vfs.py
 import xml.etree.ElementTree as ET
 import hashlib
 import base64
@@ -15,14 +14,14 @@ class VFSManager:
         """
         self._vfs_xml_path = vfs_xml_path
         self._root_name: str = ""
-        self._vfs_tree: Dict[str, Any] = {}  # Внутреннее представление VFS
-        self._current_path: List[str] = []   # Текущий путь как список имён (например: ['home', 'user'])
+        self._vfs_tree: Dict[str, Any] = {}  # внутреннее представление VFS
+        self._current_path: List[str] = []   # текущий путь как список имён (например: ['home', 'user'])
         self._xml_sha256: str = ""
 
         self._load_vfs()
 
 
-    #Загружает и парсит XML-файл VFS.
+    # загружает и парсит XML-файл VFS.
     def _load_vfs(self):
         
         try:
@@ -31,8 +30,8 @@ class VFSManager:
         except FileNotFoundError:
             raise FileNotFoundError(f"VFS XML файл не найден: {self._vfs_xml_path}")
 
-        #SHA-256 хеш содержимого файла
-        self._xml_sha256 = hashlib.sha256(xml_data).hexdigest()
+        
+        self._xml_sha256 = hashlib.sha256(xml_data).hexdigest()# SHA-256 хеш содержимого файла
 
         try:
             root = ET.fromstring(xml_data)
@@ -46,10 +45,9 @@ class VFSManager:
         self._vfs_tree = self._parse_node(root)
 
     def _parse_node(self, element: ET.Element) -> Dict[str, Any]:
-        """
-        Рекурсивно парсит XML-элемент в словарь.
-        Поддерживает <dir> и <file>.
-        """
+        
+        # рекурсивно парсит XML-элемент в словарь.
+        
         node = {'type': 'dir', 'children': {}}
 
         for child in element:
@@ -60,31 +58,29 @@ class VFSManager:
             if child.tag == 'dir':
                 node['children'][name] = self._parse_node(child)
             elif child.tag == 'file':
-                # Данные файла могут быть в base64 (или пустыми)
+                # данные файла могут быть в base64 (или пустыми)
                 content = child.text.strip() if child.text else ""
                 try:
-                    # Попытка декодировать base64 (не обязательно использовать сейчас)
                     if content:
                         base64.b64decode(content, validate=True)
                 except Exception:
-                    # Не критично на данном этапе — можно оставить как есть
                     pass
                 node['children'][name] = {'type': 'file', 'content': content}
             
 
         return node
     
-    #Возвращает информацию о VFS для команды vfs-info.
+    # возвращает информацию о VFS для команды vfs-info.
     def get_vfs_info(self) -> str:
         
         return f"VFS Name: {self._root_name}\nSHA-256: {self._xml_sha256}\n"
     
-    #Возвращает узел по пути (список имён).
+    # возвращает узел по пути (список имён).
     def _get_node_at_path(self, path_parts: List[str]) -> Optional[Dict[str, Any]]:
         
         node = self._vfs_tree
         
-        # Пустой путь = корень VFS
+        # пустой путь = корень VFS
         if not path_parts:
             return node
         
@@ -96,21 +92,21 @@ class VFSManager:
             node = node['children'][part]
         return node
 
-    #Смена текущей директории. Поддерживает '.', '..', и абсолютные пути.
+    # смена текущей директории.  '.', '..', и абсолютные пути.
     def cd(self, path: str) -> str:
         
         
         if path.startswith('/'):
-            # Абсолютный путь - начинаем с корня
+            # абсолютный путь - начинаем с корня
             if path == '/':
-                target_parts = []  # Корень VFS
+                target_parts = []  # корень VFS
             else:
                 target_parts = [p for p in path[1:].split('/') if p and p != '.']
         else:
-            # Относительный путь - от текущей директории
+            # относительный путь от текущей директории
             target_parts = self._current_path + [p for p in path.split('/') if p and p != '.']
         
-        # Обработка '..'
+        # обработка '..'
         resolved = []
         for part in target_parts:
             if part == '..':
@@ -120,10 +116,10 @@ class VFSManager:
             else:
                 resolved.append(part)
         
-        # Проверяем существование пути
+        #проверка существования пути
         node = self._get_node_at_path(resolved)
         if not node:
-            # Формируем читаемый путь для сообщения об ошибке
+            # формирование читаемого пути для сообщения об ошибке
             abs_path = '/' + '/'.join(resolved) if resolved else '/'
             return f"Ошибка: директория не найдена: {abs_path}\n"
         
@@ -131,12 +127,12 @@ class VFSManager:
             abs_path = '/' + '/'.join(resolved) if resolved else '/'
             return f"Ошибка: путь не является директорией: {abs_path}\n"
         
-        # Путь корректен - обновляем текущий путь
+        # если путь  корректен - обновляем текущий путь
         self._current_path = resolved
         return ""
 
 
-    #Возвращает список файлов и директорий в текущей директории.
+    # возвращает список файлов и директорий в текущей директории.
     def ls(self) -> str:
         
         node = self._get_node_at_path(self._current_path)
@@ -149,7 +145,7 @@ class VFSManager:
         return "\n".join(names) + "\n"
     
 
-    #Возвращает текущий путь в виде абсолютного пути (например: /home/user или /).
+    # возвращает текущий путь в виде абсолютного пути (например: /home/user или /).
     def get_current_path_str(self) -> str:
         
         if not self._current_path:
@@ -158,10 +154,10 @@ class VFSManager:
     
 
     def read_file(self, path: str) -> str:
-        """
-        читает содержимое файла по относительному или абсолютному пути.
-        Возвращает содержимое (декодированное из base64, если возможно), либо вызывает исключение.
-        """
+        
+        # читает содержимое файла по относительному или абсолютному пути.
+        # возвращает содержимое (декодированное из base64, если возможно), либо вызывает исключение.
+        
         if path.startswith('/'):
             if path == '/':
                 raise ValueError("Невозможно прочитать корень как файл")
@@ -169,7 +165,7 @@ class VFSManager:
         else:
             target_parts = self._current_path + [p for p in path.split('/') if p and p != '.']
 
-        # Обработка '..'
+        # обработка '..'
         resolved = []
         for part in target_parts:
             if part == '..':
@@ -190,11 +186,11 @@ class VFSManager:
         content = node['content']
         if content:
             try:
-                # Попытка декодировать base64
+                # попытка декодировать base64
                 decoded = base64.b64decode(content, validate=True)
                 return decoded.decode('utf-8')
             except Exception:
-                # Если не base64 — возвращаем как есть (предполагаем текст)
+                # если не base64 — возвращаем как есть (предполагаем текст)
                 return content
         return ""
 

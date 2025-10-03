@@ -1,4 +1,3 @@
-# main.py
 import tkinter as tk
 from tkinter import scrolledtext
 from handlers import CommandHandler
@@ -18,7 +17,7 @@ def parse_arguments():
     
     args = parser.parse_args()
     
-    # Проверка существования XML-файла
+    # проверка существования XML-файла
     if not os.path.isfile(args.vfs_path):
         raise FileNotFoundError(f"VFS XML-файл не найден: {args.vfs_path}")
     
@@ -37,7 +36,7 @@ class ShellEmulator:
             self.vfs_path = args.vfs_path
             self.startup_script = args.startup_script
             
-            # Инициализация GUI
+            # инициализация GUI
             self.root = tk.Tk()
             username = os.getlogin()
             hostname = socket.gethostname()
@@ -47,7 +46,7 @@ class ShellEmulator:
             self.command_handler = CommandHandler(self.vfs_path)
             self.setup_gui()
             
-            # Выполнение стартового скрипта
+            # выполнение стартового скрипта
             if self.startup_script:
                 self.execute_startup_script()
                 
@@ -56,7 +55,6 @@ class ShellEmulator:
             sys.exit(1)
 
     def _debug_output(self, args):
-        """Детальный отладочный вывод"""
         print("=" * 60)
         print("DEBUG: Параметры эмулятора терминала")
         print("=" * 60)
@@ -69,7 +67,7 @@ class ShellEmulator:
         print("=" * 60)
 
     def setup_gui(self):
-        """Настройка графического интерфейса"""
+        # настройка графического интерфейса
         self.output_text = scrolledtext.ScrolledText(
             self.root,
             wrap=tk.WORD,
@@ -82,7 +80,7 @@ class ShellEmulator:
         )
         self.output_text.pack(fill=tk.BOTH, expand=True)
         
-        # Получаем текущий путь из VFS для промпта
+        # берём текущий путь из VFS для промпта
         username = os.getlogin()
         hostname = socket.gethostname()
         current_dir = self.command_handler.vfs.get_current_path_str()
@@ -91,7 +89,7 @@ class ShellEmulator:
         self.output_text.see(tk.END)
         self.input_start = self.output_text.index("end-1c")
         
-        # Привязываем обработчики событий клавиш
+        # привязывает обработчики событий клавиш
         self.output_text.bind('<Key>', self.on_key)
         self.output_text.bind('<BackSpace>', self.on_backspace)
         self.output_text.bind('<Return>', self.on_enter)
@@ -101,20 +99,20 @@ class ShellEmulator:
         self.output_text.mark_set(tk.INSERT, tk.END)
 
     def display_output(self, text):
-        """Универсальный метод для вывода текста"""
+        # универсальный метод для вывода текста
         self.output_text.insert(tk.END, text)
         self.output_text.see(tk.END)
 
     def execute_startup_script(self):
-        """Выполнение стартового скрипта"""
+        # выполнение стартового скрипта
         executed_commands, errors = self.command_handler.execute_script(self.startup_script)
         
-        # Обрабатываем ошибки выполнения скрипта
+        # обрабатывает ошибки выполнения скрипта
         if errors:
             for error in errors:
                 self.display_output(f"\nОшибка скрипта: {error}")
         
-        # Имитируем выполнение команд для отображения в интерфейсе
+        # имитируем выполнение команд для отображения в интерфейсе
         for command in executed_commands:
             username = os.getlogin()
             hostname = socket.gethostname()
@@ -129,7 +127,7 @@ class ShellEmulator:
             self.output_text.update()
 
     def on_key(self, event):
-        """Обработчик нажатия клавиш с символами"""
+        # обработчик нажатия клавиш с символами
         current_pos = self.output_text.index(tk.INSERT)
         
         if self.output_text.compare(current_pos, "<", self.input_start):
@@ -142,7 +140,6 @@ class ShellEmulator:
         return "break"
 
     def on_backspace(self, event):
-        """Обработчик клавиши Backspace"""
         current_pos = self.output_text.index(tk.INSERT)
         
         if self.output_text.compare(current_pos, "<=", self.input_start):
@@ -154,7 +151,6 @@ class ShellEmulator:
         return "break"
 
     def on_delete(self, event):
-        """Обработчик клавиши Delete"""
         current_pos = self.output_text.index(tk.INSERT)
         
         if self.output_text.compare(current_pos, "<", self.input_start):
@@ -166,7 +162,6 @@ class ShellEmulator:
         return "break"
 
     def on_enter(self, event):
-        """Обработчик клавиши Enter"""
         command_line = self.output_text.get(self.input_start, tk.END).strip()
         
         username = os.getlogin()
@@ -188,7 +183,7 @@ class ShellEmulator:
         if result:
             self.output_text.insert(tk.END, f"\n{result}")
         
-        # Обновляем промпт с учётом возможного изменения директории (например, после cd)
+        # обновляет промпт с учётом возможного изменения директории (например, после cd)
         new_current_dir = self.command_handler.vfs.get_current_path_str()
         new_prompt = f"{username}@{hostname}:{new_current_dir}$"
         self.output_text.insert(tk.END, f"\n{new_prompt} ")
@@ -198,7 +193,7 @@ class ShellEmulator:
         return "break"
     
     def run(self):
-        """Запуск главного цикла обработки событий"""
+        # запуск главного цикла обработки событий
         self.root.mainloop()
 
 

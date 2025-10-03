@@ -1,4 +1,3 @@
-# handlers.py
 import os
 import re
 from typing import List, Tuple
@@ -7,9 +6,9 @@ from vfs import VFSManager
 
 class CommandHandler:
     def __init__(self, vfs_xml_path: str):
-        """
-        Инициализация обработчика команд с поддержкой VFS.
-        """
+        
+        # инициализация обработчика команд с поддержкой VFS.
+        
         try:
             self.vfs = VFSManager(vfs_xml_path)
         except (FileNotFoundError, ValueError) as e:
@@ -24,6 +23,8 @@ class CommandHandler:
             'vfs-info': self._handle_vfs_info,
             'pwd': self._handle_pwd,
             'cat': self._handle_cat,
+            'tac': self._handle_tac,      # новая команда
+            'rev': self._handle_rev,      # новая команда
         }
 
     def execute_script(self, script_path: str) -> Tuple[List[str], List[str]]:
@@ -49,16 +50,16 @@ class CommandHandler:
             for line_num, line in enumerate(lines, 1):
                 command = line.strip()
                 
-                # Пропускаем пустые строки и комментарии
+                # пропускаем пустые строки и комментарии
                 if not command or command.startswith('#'):
                     continue
                 
                 try:
-                    # Используем тот же execute(), что и в интерактивном режиме
+                    # используем тот же execute(), что и в интерактивном режиме
                     result = self.execute(command)
                     executed_commands.append(command)
                     
-                    # Если команда завершает работу — прерываем скрипт
+                    # если команда завершает работу — прерываем скрипт
                     if result == "EXIT_TERMINAL":
                         break
                         
@@ -123,29 +124,29 @@ class CommandHandler:
         
         try:
             if args:
-                # Сохраняем текущий путь
+                # сохраняет текущий путь
                 original_path = self.vfs._current_path.copy()
                 
-                # Пытаемся перейти по указанному пути
+                # пробует перейти по указанному пути
                 result = self.vfs.cd(args[0])
                 if result:  # Если ошибка - возвращаем её
                     return result
                 
-                # Получаем список файлов
+                # получаетм список файлов
                 ls_result = self.vfs.ls()
                 
-                # Возвращаемся обратно
+                # возвращается обратно
                 self.vfs._current_path = original_path
                 return ls_result
             else:
-                # ls без аргументов - текущая директория
+                # ls без аргументов = текущая директория
                 return self.vfs.ls()
         except Exception as e:
             return f"Ошибка при выполнении ls: {e}\n"
 
     def _handle_cd(self, args: List[str]) -> str:
         if len(args) == 0:
-            # cd без аргументов → корень VFS
+            # cd без аргументов -> корень VFS
             return self.vfs.cd("/")
         if len(args) > 1:
             return "Ошибка: команда cd принимает не более одного аргумента\n"
@@ -155,6 +156,10 @@ class CommandHandler:
         return """Доступные команды:
 ls                - список файлов и директорий в текущей папке
 cd <путь>         - перейти в директорию (поддерживает .. и /)
+pwd               - показать текущую директорию
+cat <файл>        - вывести содержимое файла
+tac <файл>        - вывести содержимое файла в обратном порядке строк
+rev <файл>        - перевернуть каждую строку файла задом наперёд
 vfs-info          - информация о загруженной VFS
 help              - показать эту справку
 exit              - выйти из терминала
@@ -180,5 +185,31 @@ exit              - выйти из терминала
         try:
             content = self.vfs.read_file(args[0])
             return content + ("\n" if not content.endswith('\n') else "")
+        except Exception as e:
+            return f"Ошибка: {e}\n"
+        
+    def _handle_tac(self, args: List[str]) -> str:
+        # выводит содержимое файла в обратном порядке строк
+        if len(args) != 1:
+            return "Ошибка: команда tac требует ровно один аргумент (имя файла)\n"
+        
+        try:
+            content = self.vfs.read_file(args[0])
+            lines = content.split('\n')
+            reversed_lines = lines[::-1]  # обратный порядок строк
+            return '\n'.join(reversed_lines) + ("\n" if content else "")
+        except Exception as e:
+            return f"Ошибка: {e}\n"
+
+    def _handle_rev(self, args: List[str]) -> str:
+        # переворачивает каждую строку файла задом наперёд
+        if len(args) != 1:
+            return "Ошибка: команда rev требует ровно один аргумент (имя файла)\n"
+        
+        try:
+            content = self.vfs.read_file(args[0])
+            lines = content.split('\n')
+            reversed_lines = [line[::-1] for line in lines]  # каждая строка перевёрнута
+            return '\n'.join(reversed_lines) + ("\n" if content else "")
         except Exception as e:
             return f"Ошибка: {e}\n"

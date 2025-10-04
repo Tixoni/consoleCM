@@ -1,0 +1,75 @@
+
+echo "=== Текущее состояние VFS ==="
+pwd
+ls
+
+echo "=== Тестирование команды mkdir ==="
+
+echo "--- Создание директории в текущей папке ---"
+mkdir new_folder
+ls
+
+echo "--- Создание вложенных директорий ---"
+mkdir new_folder/subfolder
+cd new_folder
+ls
+cd ..
+
+echo "--- Создание директории с абсолютным путем ---"
+mkdir /home/user/new_absolute_folder
+cd /home/user/new_absolute_folder
+pwd
+cd /
+
+echo "=== Тестирование команды cp ==="
+
+echo "--- Копирование файла в текущую директорию ---"
+cp /home/user/example.txt copy_of_example.txt
+ls
+cat copy_of_example.txt
+
+echo "--- Копирование файла в другую директорию ---"
+cp /home/user/example.txt /home/user/new_folder/copied_file.txt
+cd new_folder
+ls
+cat copied_file.txt
+cd ..
+
+echo "--- Копирование файла с переименованием ---"
+cp example.txt renamed_example.txt
+ls
+cat renamed_example.txt
+
+echo "=== Тестирование обработки ошибок ==="
+
+echo "--- Ошибка: mkdir без аргументов ---"
+mkdir
+
+echo "--- Ошибка: mkdir с существующей директорией ---"
+mkdir new_folder
+
+echo "--- Ошибка: cp без аргументов ---"
+cp
+
+echo "--- Ошибка: cp с одним аргументом ---"
+cp source_only
+
+echo "--- Ошибка: копирование несуществующего файла ---"
+cp nonexistent.txt destination.txt
+
+echo "--- Ошибка: копирование директории (не поддерживается) ---"
+mkdir test_dir
+cp test_dir destination
+
+echo "--- Ошибка: перезапись существующего файла ---"
+cp example.txt copy_of_example.txt
+
+echo "--- Ошибка: назначение в несуществующую директорию ---"
+cp example.txt /invalid/path/file.txt
+
+echo "=== Финальное состояние VFS ==="
+cd /home/user
+pwd
+ls -R
+
+echo "=== Тестирование завершено ==="

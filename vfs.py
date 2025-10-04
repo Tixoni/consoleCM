@@ -193,4 +193,147 @@ class VFSManager:
                 # если не base64 — возвращаем как есть (предполагаем текст)
                 return content
         return ""
+    
+    #-------------------------------------------------------5--------------------------------------------------------
+    def mkdir(self, path: str) -> str:
+        # cоздает директорию по указанному пути.
+        # путь может быть абсолютным или относительным.
+        
+        if path.startswith('/'):
+            if path == '/':
+                return "Ошибка: невозможно создать корневую директорию\n"
+            target_parts = [p for p in path[1:].split('/') if p and p != '.']
+        else:
+            target_parts = self._current_path + [p for p in path.split('/') if p and p != '.']
+        
+        # обработка '..'
+        resolved = []
+        for part in target_parts:
+            if part == '..':
+                if resolved:
+                    resolved.pop()
+            else:
+                resolved.append(part)
+        
+        # проверяем, не пытаемся ли создать существующую директорию
+        existing_node = self._get_node_at_path(resolved)
+        if existing_node:
+            abs_path = '/' + '/'.join(resolved) if resolved else '/'
+            return f"Ошибка: директория уже существует: {abs_path}\n"
+        
+        # создаем директорию рекурсивно
+        try:
+            self._create_directory_recursive(resolved)
+            return ""
+        except Exception as e:
+            return f"Ошибка создания директории: {e}\n"
+    
+    def _create_directory_recursive(self, path_parts: List[str]) -> None:
+        """Рекурсивно создает директории по указанному пути"""
+        current_node = self._vfs_tree
+        
+        for part in path_parts:
+            if current_node['type'] != 'dir':
+                raise ValueError("Промежуточный путь не является директорией")
+            
+            if part not in current_node['children']:
+                # создаем новую директорию
+                current_node['children'][part] = {'type': 'dir', 'children': {}}
+            
+            current_node = current_node['children'][part]
+
+
+
+
+    
+    def cp(self, source: str, destination: str) -> str:
+        
+        # копирует файл из source в destination.
+        # поддерживает только копирование файлов (не директорий).
+        
+        # получает исходный файл
+        if source.startswith('/'):
+            source_parts = [p for p in source[1:].split('/') if p and p != '.']
+        else:
+            source_parts = self._current_path + [p for p in source.split('/') if p and p != '.']
+        
+        # обработка '..' для source
+        resolved_source = []
+        for part in source_parts:
+            if part == '..':
+                if resolved_source:
+                    resolved_source.pop()
+            else:
+                resolved_source.append(part)
+        
+        source_node = self._get_node_at_path(resolved_source)
+        if not source_node:
+            abs_source = '/' + '/'.join(resolved_source) if resolved_source else '/'
+            return f"Ошибка: исходный файл не найден: {abs_source}\n"
+        
+        if source_node['type'] != 'file':
+            abs_source = '/' + '/'.join(resolved_source) if resolved_source else '/'
+            return f"Ошибка: исходный путь не является файлом: {abs_source}\n"
+        
+        # обрабатывает путь назначения
+        if destination.startswith('/'):
+            dest_parts = [p for p in destination[1:].split('/') if p and p != '.']
+        else:
+            dest_parts = self._current_path + [p for p in destination.split('/') if p and p != '.']
+        
+        # обработка '..' для destination
+        resolved_dest = []
+        for part in dest_parts:
+            if part == '..':
+                if resolved_dest:
+                    resolved_dest.pop()
+            else:
+                resolved_dest.append(part)
+        
+        # если destination - директория, используем исходное имя файла
+        dest_node = self._get_node_at_path(resolved_dest)
+        if dest_node and dest_node['type'] == 'dir':
+            filename = resolved_source[-1]  # берем имя файла из source
+            resolved_dest.append(filename)
+            dest_node = None  # сбрасываем, т.к. путь изменился
+        
+        # проверяет, не перезаписываем ли существующий файл
+        existing_dest = self._get_node_at_path(resolved_dest)
+        if existing_dest:
+            abs_dest = '/' + '/'.join(resolved_dest) if resolved_dest else '/'
+            return f"Ошибка: файл назначения уже существует: {abs_dest}\n"
+        
+        # копируем файл
+        try:
+            self._copy_file(resolved_source, resolved_dest, source_node)
+            return ""
+        except Exception as e:
+            return f"Ошибка копирования: {e}\n"
+    
+    def _copy_file(self, source_parts: List[str], dest_parts: List[str], source_node: Dict[str, Any]) -> None:
+        # копирует файл из source_parts в dest_parts
+        # создаем директории для пути назначения
+        parent_dest_parts = dest_parts[:-1]
+        filename = dest_parts[-1]
+        
+        current_node = self._vfs_tree
+        
+        # проходим по пути назначения (кроме последнего элемента - имени файла)
+        for part in parent_dest_parts:
+            if current_node['type'] != 'dir':
+                raise ValueError("Промежуточный путь не является директорией")
+            
+            if part not in current_node['children']:
+                raise ValueError(f"Директория назначения не существует: {part}")
+            
+            current_node = current_node['children'][part]
+        
+        # создаем копию файла
+        if current_node['type'] != 'dir':
+            raise ValueError("Путь назначения не является директорией")
+        
+        current_node['children'][filename] = {
+            'type': 'file',
+            'content': source_node['content']
+        }
 

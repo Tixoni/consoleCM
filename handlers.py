@@ -23,8 +23,11 @@ class CommandHandler:
             'vfs-info': self._handle_vfs_info,
             'pwd': self._handle_pwd,
             'cat': self._handle_cat,
-            'tac': self._handle_tac,      # новая команда
-            'rev': self._handle_rev,      # новая команда
+            'tac': self._handle_tac,      # новая команда 4
+            'rev': self._handle_rev,      # новая команда 4
+            'mkdir': self._handle_mkdir,  # Новая команда 5 
+            'cp': self._handle_cp,       # Новая команда 5
+            'echo': self._handle_echo,    # Новая команда 5
         }
 
     def execute_script(self, script_path: str) -> Tuple[List[str], List[str]]:
@@ -160,6 +163,8 @@ pwd               - показать текущую директорию
 cat <файл>        - вывести содержимое файла
 tac <файл>        - вывести содержимое файла в обратном порядке строк
 rev <файл>        - перевернуть каждую строку файла задом наперёд
+mkdir <путь>      - создать новую директорию
+cp <src> <dest>   - скопировать файл
 vfs-info          - информация о загруженной VFS
 help              - показать эту справку
 exit              - выйти из терминала
@@ -188,6 +193,8 @@ exit              - выйти из терминала
         except Exception as e:
             return f"Ошибка: {e}\n"
         
+    #-----------------------------------------------------4444444-------------------------------------
+
     def _handle_tac(self, args: List[str]) -> str:
         # выводит содержимое файла в обратном порядке строк
         if len(args) != 1:
@@ -213,3 +220,62 @@ exit              - выйти из терминала
             return '\n'.join(reversed_lines) + ("\n" if content else "")
         except Exception as e:
             return f"Ошибка: {e}\n"
+        
+    #--------------------------------------------5555555--------------------------
+    def _handle_mkdir(self, args: List[str]) -> str:
+        # оздает новую директорию
+        if len(args) != 1:
+            return "Ошибка: команда mkdir требует ровно один аргумент (путь)\n"
+        
+        try:
+            result = self.vfs.mkdir(args[0])
+            return result if result else "Директория создана успешно\n"
+        except Exception as e:
+            return f"Ошибка при выполнении mkdir: {e}\n"
+
+    def _handle_cp(self, args: List[str]) -> str:
+        # копирует файл
+        if len(args) != 2:
+            return "Ошибка: команда cp требует два аргумента (источник и назначение)\n"
+        
+        try:
+            result = self.vfs.cp(args[0], args[1])
+            return result if result else "Файл скопирован успешно\n"
+        except Exception as e:
+            return f"Ошибка при выполнении cp: {e}\n"
+        
+
+    def _handle_echo(self, args: List[str]) -> str:
+        # выводит текст в консоль, поддерживает переменные окружения и специальные символы"""
+        if not args:
+            return "\n"  # echo без аргументов - просто пустая строка
+        
+        # объединяет все аргументы в одну строку
+        text = ' '.join(args)
+        
+        # обрабатывает специальные символы
+        processed_text = self._process_echo_special_chars(text)
+        
+        # подставляет переменные окружения
+        try:
+            processed_text = self.expand_environment_variables(processed_text)
+        except ValueError as e:
+            return f"Ошибка: {e}\n"
+        
+        return processed_text + "\n"
+    
+    def _process_echo_special_chars(self, text: str) -> str:
+        #Обрабатывает специальные символы в команде echo
+        # заменяет escape-последовательности
+        replacements = {
+            '\\n': '\n',
+            '\\t': '\t',
+            '\\\\': '\\',
+            '\\$': '$'
+        }
+        
+        result = text
+        for esc, char in replacements.items():
+            result = result.replace(esc, char)
+        
+        return result
